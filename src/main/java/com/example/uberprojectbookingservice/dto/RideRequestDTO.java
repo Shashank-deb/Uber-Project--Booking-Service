@@ -11,7 +11,6 @@ import java.util.List;
 @AllArgsConstructor
 public class RideRequestDTO {
     private Long passengerId;
-
     private List<Long> driverIds;
 }
 
