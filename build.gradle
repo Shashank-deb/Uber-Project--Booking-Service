@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.4.0'
+    id 'org.springframework.boot' version '3.3.6'
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
@@ -37,7 +37,11 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-websocket-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     implementation 'com.example:UberProject-EntityService:0.0.8-SNAPSHOT'//common spring library
-
+    implementation 'com.squareup.retrofit2:retrofit:2.11.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.11.0'  // Add this line for Gson support
+    implementation 'com.squareup.retrofit2:converter-jackson:2.11.0'
+    // https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-netflix-eureka-client
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client:4.1.1'
 }
 
 tasks.named('test') {
