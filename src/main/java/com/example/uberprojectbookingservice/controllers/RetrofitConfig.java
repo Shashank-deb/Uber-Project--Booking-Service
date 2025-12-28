@@ -1,6 +1,7 @@
 package com.example.uberprojectbookingservice.controllers;
 
 import com.example.uberprojectbookingservice.apis.LocationServiceApi;
+import com.example.uberprojectbookingservice.apis.UberSocketApi;
 import com.netflix.discovery.EurekaClient;
 import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,4 +30,17 @@ public class RetrofitConfig {
                 .build()
                 .create(LocationServiceApi.class);
     }
+
+    @Bean
+    public UberSocketApi uberSocketApi() {
+        String serviceUrl = getServiceUrl("UBERSOCKETSERVICE");
+        System.out.println(serviceUrl);
+        return new Retrofit.Builder()
+                .baseUrl(getServiceUrl("UBERSOCKETSERVICE"))
+                .addConverterFactory(GsonConverterFactory.create())
+                .client(new OkHttpClient.Builder().build())
+                .build()
+                .create(UberSocketApi.class);
+    }
+
 }

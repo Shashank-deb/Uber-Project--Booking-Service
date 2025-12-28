@@ -1,15 +1,19 @@
 package com.example.uberprojectbookingservice.services;
 
 import com.example.uberprojectbookingservice.apis.LocationServiceApi;
+import com.example.uberprojectbookingservice.apis.UberSocketApi;
 import com.example.uberprojectbookingservice.dto.*;
 
 
 import com.example.uberprojectbookingservice.repository.BookingRepository;
+import com.example.uberprojectbookingservice.repository.DriverRepository;
 import com.example.uberprojectbookingservice.repository.PassengerRepository;
 import com.example.uberprojectentityservice.models.Booking;
 import com.example.uberprojectentityservice.models.BookingStatus;
+import com.example.uberprojectentityservice.models.Driver;
 import com.example.uberprojectentityservice.models.Passenger;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.filter.RequestContextFilter;
@@ -33,14 +37,21 @@ public class BookingServiceImpl implements BookingService {
 
     private final LocationServiceApi locationServiceApi;
 
+    private final UberSocketApi uberSocketApi;
+
     private final RequestContextFilter requestContextFilter;
+
+    private final DriverRepository driverRepository;
 
 //    private static final String LOCATION_SERVICE = "http://localhost:2510";
 
 
     public BookingServiceImpl(PassengerRepository passengerRepository,
                               BookingRepository bookingRepository,
-                              LocationServiceApi locationServiceApi, RequestContextFilter requestContextFilter) {
+                              LocationServiceApi locationServiceApi,
+                              RequestContextFilter requestContextFilter,
+                              DriverRepository driverRepository,
+                              UberSocketApi uberSocketApi) {
 
 
         this.passengerRepository = passengerRepository;
@@ -48,6 +59,8 @@ public class BookingServiceImpl implements BookingService {
         this.restTemplate = new RestTemplate();
         this.locationServiceApi = locationServiceApi;
         this.requestContextFilter = requestContextFilter;
+        this.driverRepository = driverRepository;
+        this.uberSocketApi = uberSocketApi;
     }
 
 
@@ -73,7 +86,7 @@ public class BookingServiceImpl implements BookingService {
                 .build();
 
 
-        processNearbyDriversAsync(request);
+        processNearbyDriversAsync(request,bookingDetails.getPassengerId());
 //
 //
 //        ResponseEntity<DriverLocationDTO[]> result = restTemplate.postForEntity(LOCATION_SERVICE + "/api/v1/location/nearby/drivers", request, DriverLocationDTO[].class);
@@ -97,16 +110,17 @@ public class BookingServiceImpl implements BookingService {
     }
 
 
-    private void processNearbyDriversAsync(NearbyDriversRequestDTO requestDTO) {
+    //This function is helping on fetching the details of Nearby Drivers as Async methods
+    private void processNearbyDriversAsync(NearbyDriversRequestDTO requestDTO,Long passengerId) {
         Call<DriverLocationDTO[]> call = locationServiceApi.getNearbyDrivers(requestDTO);
         call.enqueue(new Callback<DriverLocationDTO[]>() {
             @Override
             public void onResponse(Call<DriverLocationDTO[]> call, Response<DriverLocationDTO[]> response) {
-                try {
-                    Thread.sleep(5000);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
+//                try {
+//                    Thread.sleep(5000);
+//                } catch (InterruptedException e) {
+//                    throw new RuntimeException(e);
+//                }
                 if (response.isSuccessful() && response.body().length > 0) {
                     List<DriverLocationDTO> driverLocations = Arrays.asList(response.body());
 
@@ -116,6 +130,8 @@ public class BookingServiceImpl implements BookingService {
                                 driverLocationDTO.getLatitude(),
                                 driverLocationDTO.getLongitude());
                     });
+
+                   raiseRequestAsync(RideRequestDTO.builder().passengerId(2l).build());
                 } else {
                     System.out.println("Request failed" + response.message());
                 }
@@ -127,6 +143,43 @@ public class BookingServiceImpl implements BookingService {
             }
 
         });
+
+    }
+
+    private void raiseRequestAsync(RideRequestDTO requestDTO) {
+        Call<ResponseEntity<Boolean>> call = uberSocketApi.getNearbyDrivers(requestDTO);
+        call.enqueue(new Callback<ResponseEntity<Boolean>>() {
+            @Override
+            public void onResponse(Call<ResponseEntity<Boolean>> call, Response<ResponseEntity<Boolean>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    System.out.println(response.isSuccessful());
+                    System.out.println(response.message());
+                    ResponseEntity<Boolean> result = response.body();
+                    System.out.println("Driver response is: " + result.toString());
+
+                } else {
+                    System.out.println("Request for ride failed" + response.message());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseEntity<Boolean>> call, Throwable throwable) {
+                throwable.printStackTrace();
+            }
+        });
+    }
+
+
+    @Override
+    public UpdateBookingResponseDTO updateBooking(UpdateBookingRequestDTO bookingRequestDTO, Long bookingId) {
+        Optional<Driver> driver = driverRepository.findById(bookingRequestDTO.getDriverId().get());
+        bookingRepository.updateBookingStatusAndDriverById(bookingId, BookingStatus.SCHEDULED, driver.get());
+        Optional<Booking> booking = bookingRepository.findById(bookingId);
+        return new UpdateBookingResponseDTO().builder()
+                .bookingId(bookingId)
+                .status(booking.get().getBookingStatus())
+                .driver(Optional.ofNullable(booking.get().getDriver()))
+                .build();
 
     }
 

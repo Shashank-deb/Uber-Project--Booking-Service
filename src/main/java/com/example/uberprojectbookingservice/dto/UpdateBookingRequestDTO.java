@@ -1,17 +1,16 @@
 package com.example.uberprojectbookingservice.dto;
 
+
 import lombok.*;
 
-import java.util.List;
+import java.util.Optional;
 
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RideRequestDTO {
-    private Long passengerId;
-
-    private List<Long> driverIds;
+public class UpdateBookingRequestDTO {
+    private String status;
+    private Optional<Long> driverId;
 }
-
