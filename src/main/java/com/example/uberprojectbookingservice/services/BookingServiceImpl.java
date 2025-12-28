@@ -131,7 +131,7 @@ public class BookingServiceImpl implements BookingService {
                                 driverLocationDTO.getLongitude());
                     });
 
-                   raiseRequestAsync(RideRequestDTO.builder().passengerId(2l).build());
+                   raiseRequestAsync(RideRequestDTO.builder().passengerId(2L).build());
                 } else {
                     System.out.println("Request failed" + response.message());
                 }
@@ -147,23 +147,31 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void raiseRequestAsync(RideRequestDTO requestDTO) {
-        Call<ResponseEntity<Boolean>> call = uberSocketApi.getNearbyDrivers(requestDTO);
-        call.enqueue(new Callback<ResponseEntity<Boolean>>() {
+        Call<Boolean> call = uberSocketApi.getNearbyDrivers(requestDTO);
+        call.enqueue(new Callback<Boolean>() {
             @Override
-            public void onResponse(Call<ResponseEntity<Boolean>> call, Response<ResponseEntity<Boolean>> response) {
+            public void onResponse(Call<Boolean> call, Response<Boolean> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    System.out.println(response.isSuccessful());
-                    System.out.println(response.message());
-                    ResponseEntity<Boolean> result = response.body();
-                    System.out.println("Driver response is: " + result.toString());
-
+                    Boolean result = response.body();
+                    System.out.println("Ride request successfully sent to socket service");
+                    System.out.println("Response status: " + response.code());
+                    System.out.println("Driver response: " + result);
                 } else {
-                    System.out.println("Request for ride failed" + response.message());
+                    System.err.println("Request for ride failed. Status code: " + response.code());
+                    System.err.println("Error message: " + response.message());
+                    if (response.errorBody() != null) {
+                        try {
+                            System.err.println("Error body: " + response.errorBody().string());
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
             }
 
             @Override
-            public void onFailure(Call<ResponseEntity<Boolean>> call, Throwable throwable) {
+            public void onFailure(Call<Boolean> call, Throwable throwable) {
+                System.err.println("Failed to send ride request to socket service:");
                 throwable.printStackTrace();
             }
         });
