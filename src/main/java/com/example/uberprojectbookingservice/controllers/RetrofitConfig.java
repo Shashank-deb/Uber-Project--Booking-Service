@@ -7,24 +7,39 @@ import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
-
 
 @Configuration
 public class RetrofitConfig {
 
     @Autowired
+    @Lazy
     private EurekaClient eurekaClient;
 
     private String getServiceUrl(String serviceName) {
-        return eurekaClient.getNextServerFromEureka(serviceName, false).getHomePageUrl();
+        try {
+            return eurekaClient.getNextServerFromEureka(serviceName, false).getHomePageUrl();
+        } catch (Exception e) {
+            System.out.println("WARNING: " + serviceName + " not found in Eureka, using fallback URL");
+            // Fallback URLs
+            if (serviceName.contains("LOCATION")) {
+                return "http://localhost:2510/";
+            } else if (serviceName.contains("SOCKET")) {
+                return "http://localhost:2511/";
+            }
+            return "http://localhost:8080/";
+        }
     }
 
     @Bean
+    @Lazy  // ADD THIS
     public LocationServiceApi getLocationServiceApi() {
+        String url = getServiceUrl("UBERPROJECT-LOCATIONSERVICE");
+        System.out.println("Location Service URL: " + url);
         return new Retrofit.Builder()
-                .baseUrl(getServiceUrl("UBERPROJECT-LOCATIONSERVICE"))
+                .baseUrl(url)
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(new OkHttpClient.Builder().build())
                 .build()
@@ -32,15 +47,15 @@ public class RetrofitConfig {
     }
 
     @Bean
+    @Lazy
     public UberSocketApi uberSocketApi() {
-        String serviceUrl = getServiceUrl("UBERSOCKETSERVICE");
-        System.out.println(serviceUrl);
+        String url = getServiceUrl("UBERSOCKETSERVICE");
+        System.out.println("Socket Service URL: " + url);
         return new Retrofit.Builder()
-                .baseUrl(getServiceUrl("UBERSOCKETSERVICE"))
+                .baseUrl(url)
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(new OkHttpClient.Builder().build())
                 .build()
                 .create(UberSocketApi.class);
     }
-
 }
