@@ -155,6 +155,7 @@ public class BookingServiceImpl implements BookingService {
                 RideRequestDTO rideRequest = RideRequestDTO.builder()
                         .passengerId(passengerId)
                         .driverIds(driverIds)
+                        .bookingId(bookingId)
                         .build();
 
                 raiseRequestAsync(rideRequest, bookingId);
